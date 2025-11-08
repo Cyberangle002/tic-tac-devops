@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
         IMAGE_NAME = "cyberangle002/tic-tac-devops"
     }
 
@@ -17,7 +16,7 @@ pipeline {
         stage('Build Image') {
             steps {
                 echo '🐳 Building Docker image...'
-                sh 'docker build -t $IMAGE_NAME:latest .'
+                bat 'docker build -t %IMAGE_NAME%:latest .'
             }
         }
 
@@ -25,10 +24,10 @@ pipeline {
             steps {
                 echo '📤 Tagging and pushing Docker image to Docker Hub...'
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker tag $IMAGE_NAME:latest $IMAGE_NAME:latest
-                        docker push $IMAGE_NAME:latest
+                    bat '''
+                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                        docker tag %IMAGE_NAME%:latest %IMAGE_NAME%:latest
+                        docker push %IMAGE_NAME%:latest
                     '''
                 }
             }
@@ -37,10 +36,10 @@ pipeline {
         stage('Deploy (local)') {
             steps {
                 echo '🚀 Deploying container locally...'
-                sh '''
-                    docker stop tic-tac-devops || true
-                    docker rm tic-tac-devops || true
-                    docker run -d --name tic-tac-devops -p 8080:80 $IMAGE_NAME:latest
+                bat '''
+                    docker stop tic-tac-devops || exit 0
+                    docker rm tic-tac-devops || exit 0
+                    docker run -d --name tic-tac-devops -p 8080:80 %IMAGE_NAME%:latest
                 '''
             }
         }
@@ -55,3 +54,4 @@ pipeline {
         }
     }
 }
+     
