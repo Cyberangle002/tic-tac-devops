@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "cyberangle002/tic-tac-devops"
+        DOCKERHUB_USER = 'cyberangle002'
+        IMAGE_NAME = 'tic-tac-devops'
     }
 
     stages {
@@ -15,8 +16,8 @@ pipeline {
 
         stage('Build Image') {
             steps {
-                echo '🐳 Building Docker image...'
-                bat 'docker build -t %IMAGE_NAME%:latest .'
+                echo '🏗️ Building Docker image...'
+                bat "docker build -t ${DOCKERHUB_USER}/${IMAGE_NAME}:latest ."
             }
         }
 
@@ -24,34 +25,31 @@ pipeline {
             steps {
                 echo '📤 Tagging and pushing Docker image to Docker Hub...'
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    bat '''
+                    bat """
                         echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                        docker tag %IMAGE_NAME%:latest %IMAGE_NAME%:latest
-                        docker push %IMAGE_NAME%:latest
-                    '''
+                        docker tag ${DOCKERHUB_USER}/${IMAGE_NAME}:latest ${DOCKERHUB_USER}/${IMAGE_NAME}:latest
+                        docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:latest
+                    """
                 }
             }
         }
 
         stage('Deploy (local)') {
+            when { expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') } }
             steps {
                 echo '🚀 Deploying container locally...'
-                bat '''
-                    docker stop tic-tac-devops || exit 0
-                    docker rm tic-tac-devops || exit 0
-                    docker run -d --name tic-tac-devops -p 8080:80 %IMAGE_NAME%:latest
-                '''
+                bat "docker run -d -p 8080:80 ${DOCKERHUB_USER}/${IMAGE_NAME}:latest"
             }
         }
     }
 
     post {
         success {
-            echo '✅ Build and Deployment successful!'
+            echo '✅ Build and deployment successful!'
         }
         failure {
             echo '❌ Build failed. Check the logs for details.'
         }
     }
 }
-     
+
